@@ -1,7 +1,7 @@
 const BASE_URL = "http://localhost:3000"
 const TRAINERS_URL = `${BASE_URL}/trainers`
 const POKEMONS_URL = `${BASE_URL}/pokemons`
-let pokemonData = [] // array index is pokemon id 
+let pokemonData = [] // global variable to store all pokemon on page load
 
 document.addEventListener('DOMContentLoaded', onLoad)
 
@@ -26,9 +26,8 @@ function fetchPokemon() {
 }
 
 function parsePokemon(json) {
-    pokemonData[0] = {} // set array index = pokemon id 
     for (let i = 0; i < json.length; i++) {
-        pokemonData[i + 1] = json[i]        
+        pokemonData[i] = json[i]       
     }
 }
 
@@ -65,7 +64,7 @@ function addPokemonLiToCard(card, pokemonId) {
     const removeButton = document.createElement('button')
     const pokemonList = card.getElementsByTagName('ul')[0]
 
-    const currentPokemonData = pokemonData[pokemonId]
+    const currentPokemonData = pokemonData.find(pokemonElement => pokemonElement.id == pokemonId)
     const name = currentPokemonData['attributes'].nickname
     const species = currentPokemonData['attributes'].species 
 
@@ -80,20 +79,62 @@ function addPokemonLiToCard(card, pokemonId) {
     pokemonList.appendChild(li)
 }
 
-function removePokemonFromCard(event) {
-    console.log('remove pokemon')
+function removePokemonFromCard(event) { 
+    //1. delete from database 2. remove from dom 3. remove from pokemondata array
+    const pokemonId = event.target.dataset.pokemonId
+    fetchRequestToDeletePokemon(pokemonId)
+
     event.target.parentElement.remove()
+
+    thisPokeIndex = pokemonData.findIndex(function(pokeData) {
+        return pokeData.id == pokemonId
+    })
+    pokemonData.splice(thisPokeIndex, 1)
 }
 
-function addPokemonToCard(event) {    
+function addPokemonToCard(event) {     // need to update pokemon data array or change how add pokemonlitocard works 
     const card = event.target.parentElement
+    const trainerId = card.dataset.id
     const numberOfPokemon = event.target.parentElement.getElementsByTagName('li').length
 
-    if (numberOfPokemon < 6) {
-        const randomPokemonId = Math.floor(Math.random()*pokemonData.length)
-        addPokemonLiToCard(card, randomPokemonId)
-        console.log('add pokemon')
+    if (numberOfPokemon < 6) {   
+        fetchRequestToCreatePokemon(trainerId).then(function(pokemonObj){
+            pokemonData.push(pokemonObj)
+            addPokemonLiToCard(card, pokemonObj.id)
+        })     
+        
     } else {
         console.log('already have 6 pokemon')
     }
+}
+
+function fetchRequestToDeletePokemon(pokemonId) {
+    const configurationObject = {
+        method: 'DELETE',
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({id: pokemonId}) 
+    }
+    return fetch(`http://localhost:3000/pokemons/${pokemonId}`, configurationObject).catch(function(error) {
+        alert("Error")
+        console.log(error.message)
+    })
+}
+
+function fetchRequestToCreatePokemon(trainerId) {
+    const configurationObject = {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({id: trainerId})
+    }
+    return fetch(POKEMONS_URL, configurationObject).then(function(resp) {
+        return resp.json()
+    }).then(function(pokeObj) {
+        return pokeObj['data']
+    }).catch(function(error) {
+        alert("Error")
+        console.log(error)
+    })
 }
