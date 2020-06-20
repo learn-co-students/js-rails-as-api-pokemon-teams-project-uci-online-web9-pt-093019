@@ -13,13 +13,15 @@ class PokemonsController < ApplicationController
             render json: {
                 status: "error",
                 message: 'bad request - maximum pokemon exceeded'
-            }     
+            }, status: 400     
         end
     end
 
     def destroy
         trainer = Trainer.find(params[:trainerId])
-        pokemon = Pokemon.destroy(params[:pokemonId])
+        pokemon = Pokemon.find(params[:pokemonId])
+        # pokemon = Pokemon.destroy(params[:pokemonId])
+        trainer.pokemons.destroy(pokemon)
         render json: pokemon
     end
 end
